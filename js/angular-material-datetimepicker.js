@@ -1,4 +1,4 @@
-(function (moment) {
+(function () {
   'use strict';
   var moduleName = "ngMaterialDatePicker";
 
@@ -66,7 +66,7 @@
     + '      </md-dialog-actions>'
     + '</md-dialog>';
 
-  angular.module(moduleName, ['ngMaterial'])
+  angular.module(moduleName, ['ngMaterial', 'angularMoment'])
     .provider('mdcDatetimePickerDefaultLocale', function () {
       this.locale = 'en';
 
@@ -78,8 +78,8 @@
         this.locale = localeString;
       };
     })
-    .directive('mdcDatetimePicker', ['$mdDialog',
-      function ($mdDialog) {
+    .directive('mdcDatetimePicker', ['$mdDialog', 'moment',
+      function ($mdDialog, moment) {
 
         return {
           restrict: 'A',
@@ -139,7 +139,7 @@
                   options[i] = scope[i];
                 }
               }
-              options.currentDate = scope.currentDate;
+              options.currentDate = scope.currentDate.isValid() ? scope.currentDate : moment();
               var locals = {options: options};
               $mdDialog.show({
                   template: template,
@@ -165,9 +165,10 @@
       }])
   ;
 
-  var PluginController = function ($scope, $mdDialog, mdcDatetimePickerDefaultLocale) {
+  var PluginController = function ($scope, $mdDialog, mdcDatetimePickerDefaultLocale, moment) {
     this.currentView = VIEW_STATES.DATE;
     this._dialog = $mdDialog;
+    this.moment = moment;
 
     this.minDate;
     this.maxDate;
@@ -195,7 +196,7 @@
     this.params = angular.extend(this.params, this.options);
     this.init();
   };
-  PluginController.$inject = ['$scope', '$mdDialog', 'mdcDatetimePickerDefaultLocale'];
+  PluginController.$inject = ['$scope', '$mdDialog', 'mdcDatetimePickerDefaultLocale', 'moment'];
   PluginController.prototype = {
     init: function () {
       this.timeMode = this.params.time && !this.params.date;
@@ -204,12 +205,12 @@
       this.start();
     },
     currentNearest5Minute: function () {
-      var date = this.currentDate || moment();
+      var date = this.currentDate || this.moment();
       var minutes = (5 * Math.round(date.minute() / 5));
       if (minutes >= 60) {
         minutes = 55; //always push down
       }
-      return moment(date).minutes(minutes);
+      return this.moment(date).minutes(minutes);
     },
     initDates: function () {
       var that = this;
@@ -218,16 +219,16 @@
         if (angular.isDefined(input) && input !== null && input !== '') {
           if (angular.isString(input)) {
             if (typeof(that.params.format) !== 'undefined' && that.params.format !== null) {
-              ret = moment(input, that.params.format).locale(that.params.lang);
+              ret = that.moment(input, that.params.format).locale(that.params.lang);
             }
             else {
-              ret = moment(input).locale(that.params.lang);
+              ret = that.moment(input).locale(that.params.lang);
             }
           }
           else {
             if (angular.isDate(input)) {
               var x = input.getTime();
-              ret = moment(x, "x").locale(that.params.lang);
+              ret = that.moment(x, "x").locale(that.params.lang);
             } else if (input._isAMomentObject) {
               ret = input;
             }
@@ -239,7 +240,7 @@
         return ret;
       };
 
-      this.currentDate = _dateParam(this.params.currentDate, moment());
+      this.currentDate = _dateParam(this.params.currentDate, this.moment());
       this.minDate = _dateParam(this.params.minDate);
       this.maxDate = _dateParam(this.params.maxDate);
       this.selectDate(this.currentDate);
@@ -257,8 +258,8 @@
       var _return = true;
 
       if (typeof(this.minDate) !== 'undefined' && this.minDate !== null) {
-        var _minDate = moment(this.minDate);
-        var _date = moment(date);
+        var _minDate = this.moment(this.minDate);
+        var _date = this.moment(date);
 
         if (!checkHour && !checkMinute) {
           _minDate.hour(0);
@@ -290,8 +291,8 @@
       var _return = true;
 
       if (typeof(this.maxDate) !== 'undefined' && this.maxDate !== null) {
-        var _maxDate = moment(this.maxDate);
-        var _date = moment(date);
+        var _maxDate = this.moment(this.maxDate);
+        var _date = this.moment(date);
 
         if (!checkTime && !checkMinute) {
           _maxDate.hour(0);
@@ -321,16 +322,16 @@
     },
     selectDate: function (date) {
       if (date) {
-        this.currentDate = moment(date);
+        this.currentDate = this.moment(date);
         if (!this.isAfterMinDate(this.currentDate)) {
-          this.currentDate = moment(this.minDate);
+          this.currentDate = this.moment(this.minDate);
         }
 
         if (!this.isBeforeMaxDate(this.currentDate)) {
-          this.currentDate = moment(this.maxDate);
+          this.currentDate = this.moment(this.maxDate);
         }
         this.currentDate.locale(this.params.lang);
-        this.calendarStart = moment(this.currentDate);
+        this.calendarStart = this.moment(this.currentDate);
         this.meridien = this.currentDate.hour() >= 12 ? 'PM' : 'AM';
       }
     },
@@ -357,24 +358,24 @@
       }
     },
     isPreviousMonthVisible: function () {
-      return this.calendarStart && this.isAfterMinDate(moment(this.calendarStart).startOf('month'), false, false);
+      return this.calendarStart && this.isAfterMinDate(this.moment(this.calendarStart).startOf('month'), false, false);
     },
     isNextMonthVisible: function () {
-      return this.calendarStart && this.isBeforeMaxDate(moment(this.calendarStart).endOf('month'), false, false);
+      return this.calendarStart && this.isBeforeMaxDate(this.moment(this.calendarStart).endOf('month'), false, false);
     },
     isPreviousYearVisible: function () {
-      return this.calendarStart && this.isAfterMinDate(moment(this.calendarStart).startOf('year'), false, false);
+      return this.calendarStart && this.isAfterMinDate(this.moment(this.calendarStart).startOf('year'), false, false);
     },
     isNextYearVisible: function () {
-      return this.calendarStart && this.isBeforeMaxDate(moment(this.calendarStart).endOf('year'), false, false);
+      return this.calendarStart && this.isBeforeMaxDate(this.moment(this.calendarStart).endOf('year'), false, false);
     },
     isHourAvailable: function (hour) {
-      var _date = moment(this.currentDate);
+      var _date = this.moment(this.currentDate);
       _date.hour(this.convertHours(hour)).minute(0).second(0);
       return this.isAfterMinDate(_date, true, false) && this.isBeforeMaxDate(_date, true, false);
     },
     isMinuteAvailable: function (minute) {
-      var _date = moment(this.currentDate);
+      var _date = this.moment(this.currentDate);
       _date.minute(minute).second(0);
       return this.isAfterMinDate(_date, true, true) && this.isBeforeMaxDate(_date, true, true);
     },
@@ -512,8 +513,8 @@
           },
           bindToController: true,
           controllerAs: 'cal',
-          controller: ['$scope',
-            function ($scope) {
+          controller: ['$scope', 'moment',
+            function ($scope, moment) {
               var calendar = this,
                 picker = this.picker,
                 days = [];
@@ -887,4 +888,4 @@
         }
       }]);
 
-})(moment);
+})();

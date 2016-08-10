@@ -84,6 +84,7 @@
         return {
           restrict: 'A',
           require: 'ngModel',
+          priority: 1,
           scope: {
             currentDate: '=ngModel',
             time: '=',
@@ -127,11 +128,11 @@
             element.attr('readonly', '');
             //@TODO custom event to trigger input
             element.on('focus', function (e) {
-              e.preventDefault();
-              element.blur();
+
               if (isOn) {
                 return;
               }
+
               isOn = true;
               var options = {};
               for (var i in attrs) {
